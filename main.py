@@ -10,12 +10,21 @@ from telegram.ext import (
 )
 from pytubefix import YouTube
 import time
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Enable logging
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 logger = logging.getLogger(__name__)
+
+# Get bot token from environment variable
+BOT_TOKEN = os.getenv('BOT_TOKEN')
+if not BOT_TOKEN:
+    raise ValueError("No BOT_TOKEN found in environment variables. Please set it in .env file")
 
 # Global variables
 class UserState:
@@ -312,7 +321,7 @@ async def download_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logger.info(f"File {path} deleted successfully.")
 
 def main():
-    application = ApplicationBuilder().token("7980188907:AAEq8sb95Tpsbx_uptW-UGI8sYlx3T0PcFg").read_timeout(36000).write_timeout(36000).build()
+    application = ApplicationBuilder().token(BOT_TOKEN).read_timeout(36000).write_timeout(36000).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_youtube_link))
     application.add_handler(CallbackQueryHandler(handle_download_option, pattern="^(video|audio|back)$"))
