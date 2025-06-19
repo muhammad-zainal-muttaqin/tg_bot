@@ -295,13 +295,15 @@ async def download_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # FFmpeg is available, proceed with conversion
             command = f'ffmpeg -i "{audio_path}" -q:a 0 -map a "{mp3_path}"'
             subprocess.run(command, shell=True, check=True)
+            send_path = mp3_path  # Use converted MP3 file
         except (subprocess.CalledProcessError, FileNotFoundError):
             # FFmpeg not available, send the original audio file
             await update_progress_message(status_message, "⚠️ FFmpeg not found. Sending original audio format...")
-            mp3_path = audio_path  # Use the original file instead of converting
+            send_path = audio_path  # Use the original file instead of converting
+            mp3_path = None  # Set mp3_path to None since conversion failed
 
         await update_progress_message(status_message, "📤 Uploading...")
-        with open(mp3_path, "rb") as audio_file:
+        with open(send_path, "rb") as audio_file:
             await context.bot.send_audio(
                 chat_id=update.callback_query.message.chat_id,
                 audio=audio_file,
@@ -315,10 +317,12 @@ async def download_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update_progress_message(status_message, f"❌ Failed.\nError: {str(e)}")
     finally:
         # Clean up all temporary files
-        for path in [audio_path, mp3_path]:
-            if path and os.path.exists(path) and path != audio_path:  # Don't delete if it's the same as audio_path
-                os.remove(path)
-                logger.info(f"File {path} deleted successfully.")
+        if mp3_path and os.path.exists(mp3_path):
+            os.remove(mp3_path)
+            logger.info(f"File {mp3_path} deleted successfully.")
+        if audio_path and os.path.exists(audio_path):
+            os.remove(audio_path)
+            logger.info(f"File {audio_path} deleted successfully.")
 
 def main():
     application = ApplicationBuilder().token(BOT_TOKEN).read_timeout(36000).write_timeout(36000).build()
